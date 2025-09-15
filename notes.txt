@@ -1,0 +1,37 @@
+Default packet:
++------------+----------------+--------------------+---------------+------------------+--------------+----------------+
+| Length (2) | nonceLength(4) | nonce(nonceLength) | dataLength(4) | data(dataLength) | tagLength(4) | tag(tagLength) | 
++------------+----------------+--------------------+---------------+------------------+--------------+----------------+
+
+Handshake
+[C->S] Sends public key
+[S->C] Sends public key
+
+
+
+How to fix schemas:
+* SchemaDefinitionBuilder to build definitions
+* DataRecord for data, where each field has an attribute that has a name attached to parse it
+
+public class CredentialsDataRecord : DataRecord {
+    [SchemaProperty("id")]
+    public int Id;
+    
+    [SchemaProperty("username")]
+    public int Username;
+    
+    [SchemaProperty("password")]
+    public int Password;
+    
+    ...
+}
+
+
+
+DataFile Format:
++-------+------+--------+
+| Index | Name      | Length |
+
+|     0 | KeyLength |      1 |
+|     1 | Key       | KeyLen |
+
