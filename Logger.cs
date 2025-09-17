@@ -1,3 +1,5 @@
+using Database.ResourceManager;
+
 namespace Database;
 
 public class Logger {
@@ -39,6 +41,7 @@ public class Logger {
 
 
     private static void Log(string msg) {
+        if (ResourceUI.IsVisible) return; // TODO: add once back on main screen
         Console.WriteLine(msg);
     }
 

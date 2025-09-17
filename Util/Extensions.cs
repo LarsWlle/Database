@@ -25,4 +25,6 @@ public static class Extensions {
     public static byte[] HexStringToBytes(this string hex) => Enumerable.Range(0, hex.Length / 2)
         .Select(i => Convert.ToByte(hex.Substring(i * 2, 2), 16))
         .ToArray();
+    
+    public static string ToFixedLength(this string str, int length) => (str.Length <= length ? str.PadRight(length) : str[..length]); 
 }

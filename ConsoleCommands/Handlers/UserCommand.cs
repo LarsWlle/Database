@@ -10,7 +10,10 @@ public class UserCommand : IHandler {
      * 2. user add [username] [password]
      */
     public void Handle(string[] args, Server server) {
-        if (args.Length <= 0) Logger.Error("No arguments provided, consider using the help subcommand");
+        if (args.Length <= 0) {
+            Logger.Error("No arguments provided, consider using the help subcommand");
+            return;
+        }
 
         switch (args[0].ToLower()) {
             case "add":
