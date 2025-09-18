@@ -25,7 +25,7 @@ public class Server {
     private int _port;
     private Thread _thread;
     private readonly List<Client> _clients;
-    private readonly Encryption _encryption;
+    public readonly Encryption Encryption;
 
     #region DataFiles
     public Dictionary<string, DataFile<DataRecord>> DataFiles { get; set; }
@@ -57,10 +57,11 @@ public class Server {
     public Server(int port) {
         this._listener = new TcpListener(IPAddress.Any, port);
         this._port = port;
+        this.DataFiles = new Dictionary<string, DataFile<DataRecord>>();
         this.CredentialsFile = new CredentialsStorageFile();
         this.CredentialsFile.LoadIndex();
         this._clients = [];
-        this._encryption = new Encryption();
+        this.Encryption = new Encryption();
         this.ResourceUI = new ResourceUI(this);
         this.Users = this.CredentialsFile.All<CredentialsSchema>().Select(credschem => new User {
             Id = credschem.Id,
@@ -68,7 +69,7 @@ public class Server {
             Password = credschem.Password,
             PasswordSalt = credschem.Salt
         }).ToList();
-        Logger.Debug($"ServerPublicKey={string.Join(", ", this._encryption.GetPublicKey())}");
+        Logger.Debug($"ServerPublicKey={string.Join(", ", this.Encryption.GetPublicKey())}");
     }
 
     public void Listen() {
@@ -81,7 +82,7 @@ public class Server {
                 try {
                     while (this.IsRunning) {
                         TcpClient client = this._listener.AcceptTcpClient();
-                        Client clientListener = new(client, this, this._encryption.GetPublicKey(), this._encryption);
+                        Client clientListener = new(client, this, this.Encryption.GetPublicKey(), this.Encryption);
                         clientListener.Init();
                         this._clients.Add(clientListener);
                         Logger.Info("New client has connected!");
@@ -99,7 +100,11 @@ public class Server {
     }
 
     public void FindAndHandlePacket(Client client, uint id, byte[] data) {
-        if (!this.PacketHandlers.TryGetValue(id, out Func<InboundPacket>? value)) return;
+        if (!this.PacketHandlers.TryGetValue(id, out Func<InboundPacket>? value)) {
+            Logger.Warning($"Tried handling a packet with id {id}, but isn't registered!");
+            return;
+        }
+
         InboundPacket handler = value.Invoke();
         Logger.Debug($"Handling Packet: {handler.GetType().Name}");
         handler.Handle(client, data);

@@ -8,7 +8,7 @@ public class CredentialsStorageFile() : DataFile<CredentialsSchema>(
     new SchemaDefinitionBuilder<CredentialsSchema>()
         .AddField("id", DataType.Int32, 4)
         .AddField("username", DataType.String, 50)
-        .AddField("password", DataType.String, 32)
+        .AddField("password", DataType.ByteArray, 32)
         .AddField("salt", DataType.ByteArray, 32)
         .SetIndex(0)
 ) { }

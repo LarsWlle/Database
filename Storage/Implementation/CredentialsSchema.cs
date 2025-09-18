@@ -10,7 +10,7 @@ public class CredentialsSchema : DataRecord {
     public string Username { get; set; }
 
     [SchemaProperty("password")]
-    public string Password { get; set; }
+    public byte[] Password { get; set; }
 
     [SchemaProperty("salt")]
     public byte[] Salt { get; set; }

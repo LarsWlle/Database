@@ -16,12 +16,10 @@ public class Encryption {
     public byte[] GetPublicKey() => _serverPublicKey;
 
     public byte[] DecryptPacket(byte[] clientPublicKey, byte[] nonce, byte[] text, byte[] tag) {
-        Logger.Debug($"[DecryptPacket] Using client key = {string.Join(", ", clientPublicKey)}, And using ServerKey = {string.Join(", ", _serverPublicKey)}");
         ECDiffieHellman clientKey = ECDiffieHellman.Create();
         clientKey.ImportSubjectPublicKeyInfo(clientPublicKey, out _);
 
         byte[] sharedSecret = _serverEcdh.DeriveKeyMaterial(clientKey.PublicKey);
-        Logger.Debug($"SharedSecret={string.Join(", ", sharedSecret)}");
         byte[] aesKey = this.HKDF(sharedSecret, 32, "AES-GCM key"u8.ToArray());
 
         byte[] plain = new byte[text.Length];
@@ -89,13 +87,13 @@ public class Encryption {
 
     public (byte[] hash, byte[] salt) Hash(string input) {
         byte[] salt = RandomNumberGenerator.GetBytes(16);
-        Rfc2898DeriveBytes pbkdf2 = new(input, salt, 100_000, HashAlgorithmName.SHA3_256);
+        Rfc2898DeriveBytes pbkdf2 = new(input, salt, 100_000, HashAlgorithmName.SHA256);
         byte[] hash = pbkdf2.GetBytes(32);
 
         return (hash, salt);
     }
 
-    public bool CompareHash(string input, byte[] hash, byte[] salt) {
+    public bool CompareHash(byte[] input, byte[] hash, byte[] salt) {
         Rfc2898DeriveBytes pbkdf2 = new(input, salt, 100_000, HashAlgorithmName.SHA256);
         byte[] hashToCheck = pbkdf2.GetBytes(32);
         return CryptographicOperations.FixedTimeEquals(hash, hashToCheck);

@@ -11,7 +11,11 @@ public class ServerboundRegisterSchemaPacket : InboundPacket {
         ushort nameLength = packet.Take(2).ParseToNumber<ushort>();
         string name = Encoding.UTF8.GetString(packet.Skip(2).Take(nameLength).ToArray());
         ushort builderLength = packet.Skip(nameLength + 2).Take(2).ParseToNumber<ushort>();
-        SchemaDefinitionBuilder<DataRecord> builder = SchemaDefinitionBuilder<DataRecord>.FromBytes(packet.Skip(4 + nameLength).Take(builderLength).ToArray());
+
+        SchemaDefinitionBuilder<DataRecord> builder = SchemaDefinitionBuilder<DataRecord>.FromBytes(
+            packet.Skip(4 + nameLength).Take(builderLength).ToArray()
+        );
+
         client.Server.RegisterDataFile(name, builder);
     }
 }

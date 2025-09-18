@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Reflection;
+using System.Security.Cryptography;
 using Database.Authentication;
 using Database.Network.Packets.Handshake;
 using Database.Network.Packets.Util;
@@ -49,9 +50,9 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
                 if (bytesRead == 0) continue;
                 byte[] length = buffer.Take(2).ToArray();
                 byte[] data = buffer.Skip(2).Take(length.ParseToNumber<ushort>()).ToArray();
+                ushort packetId = data.Take(2).ParseToNumber<ushort>();
 
                 if (!this._hasExchangedKeys) {
-                    int packetId = data.Take(2).ToArray().ParseToNumber<int>();
                     if (packetId != ServerboundKeyExchangePacket.Id) continue;
                     new ServerboundKeyExchangePacket().Handle(this, data.Skip(2).ToArray());
                     this.SendPacket(new ClientboundKeyExchangePacket(encryption), true);
@@ -59,27 +60,24 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
                     continue;
                 }
 
-                int nonceLength = data.Skip(2).Take(4).ParseToNumber<int>(); // Skip 2 (length), take 4 (nonce length)
+                int nonceLength = data.Skip(2).Take(4).ParseToNumber<int>(); // Skip 2 (packetId), take 4 (nonce length)
                 byte[] nonce = data.Skip(6).Take(nonceLength).ToArray();
 
-                int actualDataLength = data.Skip(6 + nonceLength).Take(4).ParseToNumber<int>(); // Skip length + nonce length + nonce, take 4 (text len)
+                int actualDataLength = data.Skip(6 + nonceLength).Take(4).ParseToNumber<int>(); // Skip packetId + nonce length + nonce, take 4 (text len)
                 byte[] actualData = data.Skip(10 + nonceLength).Take(actualDataLength).ToArray();
 
                 int tagLength = data.Skip(10 + nonceLength + actualDataLength).Take(4).ParseToNumber<int>();
                 byte[] tag = data.Skip(14 + nonceLength + actualDataLength).Take(tagLength).ToArray();
 
-                Logger.Debug($"EncryptionDump: nonceLen={nonceLength}, actualDataLength={actualDataLength}, tagLength={tagLength}, clientPublicKey={string.Join(", ", this._clientPublicKey)}");
-
                 byte[] decryptedData = encryption.DecryptPacket(this._clientPublicKey, nonce, actualData, tag);
-                int packetId2 = decryptedData.Take(2).ParseToNumber<int>();
 
-                Logger.Packet("Packet received!", false, 0, packetId2);
+                Logger.Packet("Packet received!", false, 0, packetId);
 
-                if (server.AuthlessPackets.Contains((ushort) packetId2) && !this._hasAuthenticated) return;
+                //if (!server.AuthlessPackets.Contains(packetId) && !this._hasAuthenticated) return; // TODO: fix
 
-                Logger.Debug($"Received a packet from client (OriginalLength={length.ParseToNumber<int>()}, OriginalBuffer=[{string.Join(", ", data)}], " +
-                             $"DecryptedLength={decryptedData.Length}, DecryptedBuffer=[{string.Join(", ", decryptedData)}])");
-                this.Server.FindAndHandlePacket(this, (uint) packetId2, decryptedData.Skip(2).ToArray());
+                Logger.Debug($"[Reading] DecryptedLength={decryptedData.Length}, DecryptedBuffer=[{string.Join(", ", decryptedData)}])");
+
+                this.Server.FindAndHandlePacket(this, packetId, decryptedData.ToArray());
             } catch (Exception e) {
                 Logger.Error($"Error while reading packet: {e.Message}");
                 Logger.Error($"Stacktrace:\n{e.StackTrace}");
@@ -92,7 +90,6 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
     public void SetClientPublicKey(byte[] clientPublicKey) {
         this._clientPublicKey = clientPublicKey;
         this._hasExchangedKeys = true;
-        Logger.Debug("Exchange has happened");
     }
 
     public void SendPacket(OutboundPacket packet, bool ignoreEncryption = false) {
@@ -130,7 +127,8 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
         User? user = this.Server.GetUser(username);
         if (user == null) return LoginFailedReason.INVALID_USERNAME;
 
-        bool isCorrectPassword = encryption.CompareHash(user.Password, password, user.PasswordSalt);
+        //bool isCorrectPassword = encryption.CompareHash(user.Password[..password.Length], password, user.PasswordSalt);
+        bool isCorrectPassword = CryptographicOperations.FixedTimeEquals(user.Password.AsSpan()[..password.Length], password); // TODO: fix with hash
         if (!isCorrectPassword) return LoginFailedReason.INVALID_PASSWORD;
         this.User = user;
         this._hasAuthenticated = true;

@@ -66,9 +66,9 @@ public class SchemaDefinitionBuilder<TRecord> where TRecord : DataRecord, new() 
         byte indexedColumn = bytes.Skip(4).First();
         byte fieldCount = bytes.Skip(5).First();
 
-        SchemaDefinitionBuilder<TRecord> builder = new SchemaDefinitionBuilder<TRecord>().SetIndex(indexedColumn);
+        SchemaDefinitionBuilder<TRecord> builder = new();
 
-        int ptr = 5;
+        int ptr = 6;
         for (int i = 0; i < fieldCount; i++) {
             ushort nameLength = bytes.Skip(ptr).Take(2).ParseToNumber<ushort>();
             string name = Encoding.UTF8.GetString(bytes.Skip(ptr + 2).Take(nameLength).ToArray());
@@ -79,6 +79,8 @@ public class SchemaDefinitionBuilder<TRecord> where TRecord : DataRecord, new() 
 
             ptr += nameLength + 7;
         }
+
+        builder = builder.SetIndex(indexedColumn);
 
         return builder;
     }

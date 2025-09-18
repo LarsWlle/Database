@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text;
 using Database.Storage.Implementation;
 
 namespace Database.ConsoleCommands.Handlers;
@@ -28,7 +29,7 @@ public class UserCommand : IHandler {
                 server.CredentialsFile.Add(new CredentialsSchema {
                     Id = new Random().Next(),
                     Username = username,
-                    Password = password,
+                    Password = Encoding.ASCII.GetBytes(password),
                     Salt = salt
                 });
                 Logger.Info("User has been added!");
