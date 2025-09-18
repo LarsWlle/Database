@@ -1,5 +1,7 @@
 using System.Runtime.InteropServices;
+using Database.Authentication;
 using Database.Handling;
+using Database.Network;
 using Database.Util;
 
 namespace Database.ResourceManager;
@@ -13,96 +15,136 @@ namespace Database.ResourceManager;
  * Table, (bottom row = total, sticky), all rows are scrollable (if doesn't fit)
  */
 
-public static class ResourceUI {
-    private static int _width, _height;
-    private static Thread? _rescaleThread;
-    private static Thread? _keyboardThread;
-    private static bool _isUsableMemoized;
-    private static bool _isUsableSetMemoized;
-    public static bool IsVisible;
-    public static bool IsUsable {
-        get {
-            if (_isUsableSetMemoized) return _isUsableMemoized;
+public class ResourceUI {
+    private readonly Server _server;
 
-            _isUsableMemoized = CanOperatingSystemSupport();
-            _isUsableSetMemoized = true;
-            return _isUsableMemoized;
+    #region UI Variables
+    private readonly int _scrollCounter = 0;
+    #endregion
+
+    private int _width, _height;
+    private Thread? _rescaleThread;
+    private Thread? _rerenderThread;
+    private bool _isUsableMemoized;
+    private bool _isUsableSetMemoized;
+    public bool IsVisible;
+    public bool IsUsable {
+        get {
+            if (this._isUsableSetMemoized) return this._isUsableMemoized;
+
+            this._isUsableMemoized = this.CanOperatingSystemSupport();
+            this._isUsableSetMemoized = true;
+            return this._isUsableMemoized;
         }
     }
 
-    public static void TriggerKeyEvent(ConsoleKey c) {
-        OnKeyInput.Invoke(c);
+    public void TriggerKeyEvent(ConsoleKey c) {
+        this.OnKeyInput.Invoke(c);
     }
 
     public delegate void OnKeyInputDelegate(ConsoleKey key);
-    public static event OnKeyInputDelegate OnKeyInput = key => {
-        switch (key) {
-            case ConsoleKey.Escape:
-                SwitchToLogs();
-                break;
-        }
-    };
+    public event OnKeyInputDelegate OnKeyInput;
 
-    public static void SetupThread() {
-        if (_rescaleThread != null && _keyboardThread != null) return; // Already set up
-        _width = Console.BufferWidth;
-        _height = Console.BufferHeight;
-        _rescaleThread = new Thread(() => {
+    public ResourceUI(Server server) {
+        this._server = server;
+        this.OnKeyInput = key => {
+            switch (key) {
+                case ConsoleKey.Escape:
+                    this.SwitchToLogs();
+                    break;
+            }
+        };
+    }
+
+    public void SetupThread() {
+        if (this._rescaleThread != null && this._rerenderThread != null) return; // Already set up
+        this._width = Console.BufferWidth;
+        this._height = Console.BufferHeight;
+        this._rescaleThread = new Thread(() => {
             while (true) {
-                if (!IsVisible) {
+                if (!this.IsVisible) {
                     Thread.Sleep(1000);
                     continue;
                 }
 
-                if (Console.BufferWidth != _width || Console.BufferHeight != _height) {
-                    _width = Console.BufferWidth;
-                    _height = Console.BufferHeight;
+                if (Console.BufferWidth != this._width || Console.BufferHeight != this._height) {
+                    this._width = Console.BufferWidth;
+                    this._height = Console.BufferHeight;
 
-                    Rerender();
+                    this.Rerender();
                 }
 
 
                 Thread.Sleep(100);
             }
         });
-        _rescaleThread.Start();
+        this._rescaleThread.Start();
+
+        this._rerenderThread = new Thread(() => {
+            while (true) {
+                if (!this.IsVisible) {
+                    Thread.Sleep(1000);
+                    continue;
+                }
+
+                this.Rerender();
+                Thread.Sleep(1000);
+            }
+        });
+        this._rerenderThread.Start();
     }
 
-    private static void Rerender() {
-        if (!IsVisible) return;
-        int width = _width, height = _height; // Store again, if resizes mid-render it will give weird results
+    private void Rerender() {
+        if (!this.IsVisible) return;
+        int width = this._width, height = this._height; // Store again, if resizes mid-render it will give weird results
 
         string[] lines = new string[height];
         lines[0] = "".PadRight(width);
         lines[1] = " \e[30m\e[43m [ESC] Go Back | [PageUp] Scroll Up | [PageDown] Scroll Down".ToFixedLength(width);
 
-        for (int i = 2; i < lines.Length - 1; i++)
-            lines[i] = " \e[43m \e[0m" + "".ToFixedLength(width - 4) + "\e[43m \e[0m ";
+        for (int i = 2; i < lines.Length - 1; i++) {
+            if (this._server.Users.Count <= i - 2 + this._scrollCounter) {
+                lines[i] = " \e[43m \e[0m" + "".ToFixedLength(width - 4) + "\e[43m \e[0m ";
+                continue;
+            }
 
-        lines[height - 1] = " \e[30m\e[43m Total: ".ToFixedLength(width) + " \e[0m";
+            User user = this._server.Users[i - 2 + this._scrollCounter];
+            Client? client = this._server.GetCorrespondingClient(user);
+
+            if (client == null) {
+                lines[i] = (" \e[43m \e[0m" + $"{user.Username}\t\t NO ACTIVE CONNECTION").ToFixedLength(width - 1) + "\e[43m ";
+                continue;
+            }
+
+            string username = user.Username.ToFixedLength(50);
+            lines[i] = " \e[43m \e[0m" + $"{username} ACTIVE {client.TransactionPacketCounter.ToString().ToFixedLength(5)}".ToFixedLength(width - 4) + "\e[43m ";
+        }
+
+        lines[height - 1] = (" \e[30m\e[43m " + "Username".ToFixedLength(50)).ToFixedLength(width) + " \e[0m";
 
 
+        Console.Clear();
         Console.Out.Write(string.Join("\r\n\e[0m", lines));
     }
 
-    public static void SwitchToScreen() {
-        IsVisible = true;
+    public void SwitchToScreen() {
+        this.IsVisible = true;
         StdInListener.Instance.IsOnAlternateBuffer = true;
-        _width = Console.BufferWidth;
-        _height = Console.BufferHeight;
+        this._width = Console.BufferWidth;
+        this._height = Console.BufferHeight;
         Console.Out.Write("\e[?1049h");
-        Rerender();
+        this.Rerender();
     }
 
-    public static void SwitchToLogs() {
+    public void SwitchToLogs() {
         Console.Out.Write("\e[?1049l");
-        IsVisible = false;
+        this.IsVisible = false;
         StdInListener.Instance.IsOnAlternateBuffer = false;
         Logger.Info("Back to logs!");
     }
 
-    private static bool CanOperatingSystemSupport() {
-        if (_isUsableSetMemoized) return _isUsableMemoized;
+    private bool CanOperatingSystemSupport() {
+        if (this._isUsableSetMemoized) return this._isUsableMemoized;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) return true; // Ansi terminals on Linux/macos are supported
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return false;
 

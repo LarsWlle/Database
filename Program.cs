@@ -1,7 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using Database.ConsoleCommands;
 using Database.Handling;
-using Database.ResourceManager;
 using DotNetEnv;
 
 namespace Database;
@@ -11,7 +10,11 @@ internal class Program {
         Env.Load();
 
 
-        if (!ResourceUI.IsUsable) {
+        Logger.Info($"Environment variables: {string.Join(", ", Environment.GetEnvironmentVariables().Keys)}");
+        Server server = new(5000);
+        Logger.ResourceUI = server.ResourceUI;
+
+        if (!server.ResourceUI.IsUsable) {
             Logger.Warning("ResourceUI will be disabled: operating system does not support this!");
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
@@ -20,12 +23,11 @@ internal class Program {
             }
         }
 
-        Logger.Info($"Environment variables: {string.Join(", ", Environment.GetEnvironmentVariables().Keys)}");
-        Server server = new(5000);
+
         server.Listen();
         CommandListener cmdListener = new(server);
-        StdInListener stdInListener = new(cmdListener);
+        StdInListener stdInListener = new(cmdListener, server.ResourceUI);
 
-        while (true) { }
+        while (true) { } // TODO: fix something not so bad
     }
 }

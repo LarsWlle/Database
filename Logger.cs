@@ -3,6 +3,7 @@ using Database.ResourceManager;
 namespace Database;
 
 public class Logger {
+    public static ResourceUI? ResourceUI;
     private static string Gray(string msg) => $"\x1b[90m{msg}\x1b[0m";
     private static string Cyan(string msg) => $"\x1b[96m{msg}\x1b[0m";
     private static string Green(string msg) => $"\x1b[92m{msg}\x1b[0m";
@@ -10,7 +11,6 @@ public class Logger {
     private static string Magenta(string msg) => $"\x1b[35m{msg}\x1b[0m";
     private static string Red(string msg) => $"\x1b[31m{msg}\x1b[0m";
     private static string BrightRed(string msg) => $"\x1b[91m{msg}\x1b[0m";
-
 
     public static void Info(string msg) {
         Log($"{Gray("[")}{Cyan(GetFormattedDate())}{Gray("]")} {Gray("[")}{Green("INFO")}{Gray("]")} {msg}");
@@ -39,9 +39,8 @@ public class Logger {
         );
     }
 
-
     private static void Log(string msg) {
-        if (ResourceUI.IsVisible) return; // TODO: add once back on main screen
+        if (ResourceUI is { IsVisible: true }) return; // TODO: add once back on main screen
         Console.WriteLine(msg);
     }
 

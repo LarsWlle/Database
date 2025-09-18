@@ -1,16 +1,14 @@
-using Database.ResourceManager;
-
 namespace Database.ConsoleCommands.Handlers;
 
 public class ResourcesCommand : IHandler {
     public void Handle(string[] args, Server server) {
-        if (!ResourceUI.IsUsable) {
+        if (!server.ResourceUI.IsUsable) {
             Logger.Fatal("InvalidOperatingSystem: Operating system does not support alternative buffers.");
             return;
         }
 
-        ResourceUI.SetupThread();
-        ResourceUI.SwitchToScreen();
+        server.ResourceUI.SetupThread();
+        server.ResourceUI.SwitchToScreen();
     }
 
     public List<string> GetHelp() => [

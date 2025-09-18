@@ -14,9 +14,12 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
     private Thread _thread;
     private bool _running;
     private bool _hasAuthenticated;
-    private User? _user;
+
     private bool _holdup;
 
+    internal int TransactionPacketCounter = 0;
+
+    public User? User;
     public readonly Server Server = server;
 
     public void Init() {
@@ -75,7 +78,7 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
                 if (server.AuthlessPackets.Contains((ushort) packetId2) && !this._hasAuthenticated) return;
 
                 Logger.Debug($"Received a packet from client (OriginalLength={length.ParseToNumber<int>()}, OriginalBuffer=[{string.Join(", ", data)}], " +
-                             $"Length={decryptedData.Length}, OriginalBuffer=[{string.Join(", ", decryptedData)}])");
+                             $"DecryptedLength={decryptedData.Length}, DecryptedBuffer=[{string.Join(", ", decryptedData)}])");
                 this.Server.FindAndHandlePacket(this, (uint) packetId2, decryptedData.Skip(2).ToArray());
             } catch (Exception e) {
                 Logger.Error($"Error while reading packet: {e.Message}");
@@ -129,9 +132,10 @@ public class Client(TcpClient client, Server server, byte[] serverPubKey, Encryp
 
         bool isCorrectPassword = encryption.CompareHash(user.Password, password, user.PasswordSalt);
         if (!isCorrectPassword) return LoginFailedReason.INVALID_PASSWORD;
-        this._user = user;
+        this.User = user;
         this._hasAuthenticated = true;
         Logger.Info($"New Login (Username={user.Username}, EndPoint={client.Client.RemoteEndPoint})");
+        this.User = user;
 
         return LoginFailedReason.SUCCESSFUL;
     }

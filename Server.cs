@@ -5,6 +5,7 @@ using Database.Network;
 using Database.Network.Packets;
 using Database.Network.Packets.Data;
 using Database.Network.Packets.Handshake;
+using Database.ResourceManager;
 using Database.Storage;
 using Database.Storage.Implementation;
 using Database.Storage.Schemas;
@@ -17,12 +18,14 @@ public class Server {
     public const uint MAX_PACKET_SIZE = 2048;
     public const uint PROTOCOL_VERSION = 1;
 
+    public ResourceUI ResourceUI;
+    public readonly List<User> Users;
+
     private readonly TcpListener _listener;
     private int _port;
     private Thread _thread;
     private readonly List<Client> _clients;
     private readonly Encryption _encryption;
-    private readonly List<User> _users;
 
     #region DataFiles
     public Dictionary<string, DataFile<DataRecord>> DataFiles { get; set; }
@@ -58,14 +61,13 @@ public class Server {
         this.CredentialsFile.LoadIndex();
         this._clients = [];
         this._encryption = new Encryption();
-        this._users = [
-            new User {
-                Id = 0,
-                Username = "root",
-                Password = "pwd",
-                PasswordSalt = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-            }
-        ]; // TODO: Fix from file
+        this.ResourceUI = new ResourceUI(this);
+        this.Users = this.CredentialsFile.All<CredentialsSchema>().Select(credschem => new User {
+            Id = credschem.Id,
+            Username = credschem.Username,
+            Password = credschem.Password,
+            PasswordSalt = credschem.Salt
+        }).ToList();
         Logger.Debug($"ServerPublicKey={string.Join(", ", this._encryption.GetPublicKey())}");
     }
 
@@ -128,7 +130,7 @@ public class Server {
     }
 
     public User? GetUser(string username) {
-        return this._users.SingleOrDefault(u => u.Username == username);
+        return this.Users.SingleOrDefault(u => u.Username == username);
     }
 
     public void RegisterDataFile<T>(string name, SchemaDefinitionBuilder<T> definition) where T : DataRecord, new() {
@@ -137,5 +139,9 @@ public class Server {
 
         this.DataFiles.Add(name, (file as DataFile<DataRecord>)!);
         Logger.Debug($"New data file has been registered (Name={name})");
+    }
+
+    public Client? GetCorrespondingClient(User user) {
+        return this._clients.SingleOrDefault(c => c.User != null && c.User.Id == user.Id);
     }
 }

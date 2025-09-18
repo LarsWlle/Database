@@ -11,13 +11,13 @@ public class StdInListener {
 
     public bool IsOnAlternateBuffer { get; set; } = false;
 
-    public StdInListener(CommandListener cmdListener) {
+    public StdInListener(CommandListener cmdListener, ResourceUI resourceUI) {
         Instance = this;
         this._task = new Task(() => {
             while (true) {
                 ConsoleKeyInfo key = Console.ReadKey();
                 if (this.IsOnAlternateBuffer) {
-                    ResourceUI.TriggerKeyEvent(key.Key);
+                    resourceUI.TriggerKeyEvent(key.Key);
                     continue;
                 }
 
