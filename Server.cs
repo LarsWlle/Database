@@ -73,6 +73,8 @@ public class Server {
             PasswordSalt = credschem.Salt
         }).ToList();
         Logger.Debug($"ServerPublicKey={string.Join(", ", this.Encryption.GetPublicKey())}");
+
+        this.LoadDataFiles();
     }
 
     public void Listen() {
@@ -147,6 +149,24 @@ public class Server {
 
         this.DataFiles.Add(name, (file as DataFile<DataRecord>)!);
         Logger.Debug($"New data file has been registered (Name={name})");
+    }
+
+    public void LoadDataFiles() {
+        foreach (string file in Directory.GetFiles("data", "*", SearchOption.AllDirectories)) {
+            if (file.EndsWith(".index")) return;
+            FileStream reader = File.OpenRead(file);
+            byte[] schemaLength = new byte[4];
+            reader.ReadExactly(schemaLength, 0, 4);
+            int bytesToRead = schemaLength.ParseToNumber<int>();
+
+            byte[] data = new byte[bytesToRead];
+            reader.ReadExactly(data, 0, bytesToRead);
+            SchemaDefinitionBuilder<DataRecord> definition = SchemaDefinitionBuilder<DataRecord>.FromBytes(data);
+
+            DataFile<DataRecord> datafile = new("data", file, definition);
+            this.DataFiles.Add(file.Split('\\').Last(), datafile);
+            Logger.Debug($"Loaded data file: {file}");
+        }
     }
 
     public Client? GetCorrespondingClient(User user) {
