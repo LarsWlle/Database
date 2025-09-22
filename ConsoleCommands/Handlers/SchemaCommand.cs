@@ -15,6 +15,10 @@ public class SchemaCommand : IHandler {
         if (args[0] == "*") {
             Logger.Debug($"Writing {server.DataFiles.Count} schemas to stdout!");
             foreach ((string? key, DataFile<DataRecord>? value) in server.DataFiles) this.LogAsTable(key, value);
+
+            // Internal files
+            this.LogAsTable("Internal/Credentials", server.CredentialsFile);
+
             return;
         }
 
@@ -26,7 +30,7 @@ public class SchemaCommand : IHandler {
         this.LogAsTable(args[0], file);
     }
 
-    private void LogAsTable(string name, DataFile<DataRecord> file) {
+    private void LogAsTable<T>(string name, DataFile<T> file) where T : DataRecord, new() {
         List<List<string>> table = [];
         int counter = 0;
         file.Definition.Build().ForEach(def => {
@@ -34,12 +38,11 @@ public class SchemaCommand : IHandler {
             counter++;
         });
 
-        Logger.Info(
-            string.Join(
-                "\r\n",
-                table.ToAsciiTable(name, "Index", "Name", "Length", "Type", "IsIndex").Select(line => line.ToFixedLength(Console.BufferWidth - 33))
-            )
-        );
+        List<string> result = table
+            .ToAsciiTable(name, "Index", "Name", "Length", "Type", "IsIndex")
+            .ToList();
+        //.Select(line => line.ToFixedLength(Console.BufferWidth - 33));
+        result.ForEach(Logger.Info);
     }
 
     public List<string> GetHelp() => [
