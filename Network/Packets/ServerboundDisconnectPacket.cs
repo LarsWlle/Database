@@ -1,4 +1,4 @@
-using DatabaseTesting.Packets.Enums;
+using Database.Network.Packets.Enums;
 
 namespace Database.Network.Packets;
 

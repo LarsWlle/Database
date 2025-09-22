@@ -2,10 +2,10 @@ using System.Net.Sockets;
 using System.Reflection;
 using System.Security.Cryptography;
 using Database.Authentication;
+using Database.Network.Packets.Enums;
 using Database.Network.Packets.Handshake;
 using Database.Network.Packets.Util;
 using Database.Util;
-using DatabaseTesting.Packets.Enums;
 
 namespace Database.Network;
 

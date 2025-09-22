@@ -1,4 +1,4 @@
-namespace DatabaseTesting.Packets.Enums;
+namespace Database.Network.Packets.Enums;
 
 public enum DisconnectReason {
     /// <summary>

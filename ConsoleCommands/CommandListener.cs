@@ -7,7 +7,8 @@ public class CommandListener(Server server) {
         { "user", new UserCommand() },
         { "quit", new QuitCommand() },
         { "stop", new QuitCommand() },
-        { "resources", new ResourcesCommand() }
+        { "resources", new ResourcesCommand() },
+        { "schema", new SchemaCommand() }
     };
 
     private void Handle(string command, string[] args) {

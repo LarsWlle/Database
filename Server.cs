@@ -4,13 +4,13 @@ using Database.Authentication;
 using Database.Network;
 using Database.Network.Packets;
 using Database.Network.Packets.Data;
+using Database.Network.Packets.Enums;
 using Database.Network.Packets.Handshake;
 using Database.ResourceManager;
 using Database.Storage;
 using Database.Storage.Implementation;
 using Database.Storage.Schemas;
 using Database.Util;
-using DatabaseTesting.Packets.Enums;
 
 namespace Database;
 
@@ -41,6 +41,8 @@ public class Server {
         ServerboundDisconnectPacket.Id
     ];
 
+    public static readonly string[] FORBIDDEN_DATAFILE_REQUESTS = ["internal/credentials"];
+
     public Dictionary<uint, Func<InboundPacket>> PacketHandlers { get; set; } = new() {
         // Handshake (0 - 9)
         { ServerboundKeyExchangePacket.Id, () => new ServerboundKeyExchangePacket() },
@@ -49,6 +51,7 @@ public class Server {
 
         // Data (10 - 100)
         { ServerboundRegisterSchemaPacket.Id, () => new ServerboundRegisterSchemaPacket() },
+        { ServerboundAddRecordPacket.Id, () => new ServerboundAddRecordPacket() },
 
         // Other
         { ServerboundDisconnectPacket.Id, () => new ServerboundDisconnectPacket() }

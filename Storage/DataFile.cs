@@ -25,6 +25,8 @@ public class DataFile<TRecord>(string dirName, string fileName, SchemaDefinition
         return File.Exists(this.DirName + "\\" + this.FileName) && File.Exists(this.DirName + "\\" + this.FileName + ".index");
     }
 
+    public bool DoesIndexExist(object key) => this._index.ContainsKey(key);
+
     public void Create() {
         if (this.Exists()) return;
 
@@ -81,6 +83,28 @@ public class DataFile<TRecord>(string dirName, string fileName, SchemaDefinition
         } catch (Exception e) {
             Logger.Fatal($"Couldn't write to storage: {e}");
         }
+    }
+
+    public void Add(byte[] data) {
+        string? secret = Environment.GetEnvironmentVariable("SECRET");
+        if (secret == null) throw new EnvVariableNotFoundException("Secret not found to encrypt data! Add a \"SECRET\" environment variable!", "SECRET");
+
+        (byte[] data, byte[] nonce, byte[] tag) encrypted = this._encryption.Encrypt(secret.HexStringToBytes(), data);
+
+        byte[] array = [
+            ..encrypted.nonce.Length.ParseToBytes(), ..encrypted.nonce,
+            ..encrypted.data.Length.ParseToBytes(), ..encrypted.data,
+            ..encrypted.tag.Length.ParseToBytes(), ..encrypted.tag
+        ];
+
+        FileStream fs = new(this.DataFilePath, FileMode.Append, FileAccess.Write);
+        long position = fs.Position;
+        fs.Close();
+
+        File.AppendAllBytes(this.DataFilePath, array);
+        byte[] indexedArray = this.Definition.IndexedValueFromByteArray(data);
+        object indexedObject = this.ParseObject(indexedArray, this.Definition.Build()[this.Definition.GetIndex()].Type);
+        this.AddIndex(position, indexedObject);
     }
 
     private void AddIndex(long position, object value) {
@@ -175,5 +199,5 @@ public class DataFile<TRecord>(string dirName, string fileName, SchemaDefinition
         }
     }
 
-    public void GetByIndex(byte[] value) { }
+    public bool IsValidDataRecord(byte[] data) => data.Length == this.Definition.Build().Sum(def => def.Length);
 }

@@ -5,12 +5,13 @@ namespace Database.Util;
 public class Encryption {
     private static ECDiffieHellman _serverEcdh;
     private static byte[] _serverPublicKey;
-    private static readonly bool _hasCreatedServerEcdh = false;
+    private static bool _hasCreatedServerEcdh;
 
     public Encryption() {
         if (_hasCreatedServerEcdh) return;
         _serverEcdh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
         _serverPublicKey = _serverEcdh.ExportSubjectPublicKeyInfo();
+        _hasCreatedServerEcdh = true;
     }
 
     public byte[] GetPublicKey() => _serverPublicKey;
