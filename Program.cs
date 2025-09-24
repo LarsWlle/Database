@@ -1,4 +1,6 @@
 ﻿using System.Runtime.InteropServices;
+using Database.Configuration;
+using Database.Configuration.Impl;
 using Database.ConsoleCommands;
 using Database.Handling;
 using DotNetEnv;
@@ -9,9 +11,13 @@ internal class Program {
     private static void Main(string[] args) {
         Env.Load();
 
+        ConfigManager configManager = new();
+        GeneralConfig generalConfig = new();
+        configManager.Register("general", generalConfig);
+
 
         Logger.Info($"Environment variables: {string.Join(", ", Environment.GetEnvironmentVariables().Keys)}");
-        Server server = new(5000);
+        Server server = new(generalConfig.Port);
         Logger.ResourceUI = server.ResourceUI;
 
         if (!server.ResourceUI.IsUsable) {
