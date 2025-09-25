@@ -18,6 +18,7 @@ internal class Program {
 
         Logger.Info($"Environment variables: {string.Join(", ", Environment.GetEnvironmentVariables().Keys)}");
         Server server = new(generalConfig.Port);
+
         Logger.ResourceUI = server.ResourceUI;
 
         if (!server.ResourceUI.IsUsable) {
@@ -31,9 +32,21 @@ internal class Program {
 
 
         server.Listen();
+        Logger.Info($"Running on port {generalConfig.Port}");
         CommandListener cmdListener = new(server);
         StdInListener stdInListener = new(cmdListener, server.ResourceUI);
 
+        Console.CancelKeyPress += (sender, e) => {
+            HandleQuit(server);
+            e.Cancel = true;
+        };
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) => { HandleQuit(server); };
+
         while (true) { } // TODO: fix something not so bad
+    }
+
+    private static void HandleQuit(Server server) {
+        Logger.Info("Received process exit!");
+        server.Stop();
     }
 }
