@@ -42,34 +42,33 @@ public abstract class AbstractConfig : IConfigFile {
                 return;
             }
 
-            Match propertyResult = Regex.Match(line, IConfigFile.PropertyRegex);
-            if (propertyResult.Groups.Count != 2) {
+            string[] splitted = line.Trim().Split("=");
+            if (splitted.Length != 2) {
                 Logger.Fatal($"Property does not have a correct format! (property = {line})");
                 Environment.Exit(1);
                 return;
             }
 
-            string propertyName = propertyResult.Groups[0].Value;
-            string propertyValue = propertyResult.Groups[1].Value;
+            string propertyName = splitted[0];
+            string propertyValue = splitted[1];
 
             if (propertyValue.StartsWith('"') && propertyValue.EndsWith('"')) {
                 currentSection.Put(propertyName, propertyValue);
             } else if (propertyValue is "true" or "false") {
-                // Handle bool
                 currentSection.Put(propertyName, bool.Parse(propertyValue));
             } else {
-                // Parse to string with try catch if is not number
-                bool isDouble = double.TryParse(propertyValue, out double value);
-                if (isDouble) {
-                    currentSection.Put(propertyName, value);
+                bool isLong = long.TryParse(propertyValue, out long longVal);
+                if (isLong) {
+                    currentSection.Put(propertyName, longVal);
                     continue;
                 }
 
-                bool isInt = long.TryParse(propertyValue, out long intVal);
-                if (isInt) {
-                    currentSection.Put(propertyName, intVal);
+                bool isDouble = double.TryParse(propertyValue, out double doubleVal);
+                if (isDouble) {
+                    currentSection.Put(propertyName, doubleVal);
                     continue;
                 }
+
 
                 Logger.Fatal($"Property type is not recognized! (property = {line})");
                 Environment.Exit(1);

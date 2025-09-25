@@ -36,17 +36,16 @@ internal class Program {
         CommandListener cmdListener = new(server);
         StdInListener stdInListener = new(cmdListener, server.ResourceUI);
 
-        Console.CancelKeyPress += (sender, e) => {
-            HandleQuit(server);
-            e.Cancel = true;
-        };
+        Console.CancelKeyPress += (sender, e) => { HandleQuit(server); };
         AppDomain.CurrentDomain.ProcessExit += (sender, e) => { HandleQuit(server); };
 
-        while (true) { } // TODO: fix something not so bad
+        while (server.IsRunning) { } // TODO: fix something not so bad
     }
 
     private static void HandleQuit(Server server) {
         Logger.Info("Received process exit!");
         server.Stop();
+
+        Environment.Exit(0);
     }
 }
